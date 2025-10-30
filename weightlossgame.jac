@@ -1,46 +1,77 @@
-"""A weightloss tracking game"""
+"""An interactive Weightloss Tracking Game"""
 
-use byllm;
+from byllm.lib import Model;
 
-@agent(model_name="gemini-2.5-flash", verbose=False);
+# Initialize global AI model
+global llm = Model(model_name="gemini-2.5-flash", verbose=false);
 
-def give_proper_weight(weight: float, height: float, proper_weight: float) -> str by llm();
+# LLM-driven weight evaluation function
+def give_proper_weight(weight: float, height: float) -> str by llm() {
+    """AI evaluates if user's weight is healthy for their height."""
+    return f"""
+    Analyze the user's body weight and height below:
+    - Weight: {weight} kg
+    - Height: {height} meters
+    
+    Calculate their BMI and classify it (Underweight, Normal, Overweight, Obese).
+    Provide short advice on how to improve their fitness in one friendly sentence.
+    Format the output like this:
+    [BMI] - [Category] | Advice: [one sentence]
+    """;
+};
 
-# Each turn architype(node) holds the proper_weight to be displayed after weight and height input.
-architype turn:
-    has proper_weight: str; 
+architype turn {
+    has proper_weight: str;
 
-    def on_spawn(weight: float, height: float):
-        self.proper_weight = give_proper_weight(weight, height)
-        std.log("📤Your Proper weight: ")
-        std.log(self.proper_weight)
+    def on_spawn(weight: float, height: float) {
+        std.out("🤖 Calculating your ideal body metrics...");
+        proper_weight = give_proper_weight(weight, height);
+        std.out("📤 Your AI health report: " + proper_weight);
+    };
+};
 
-walker Weightloss:
+walker weightloss {
     # walker attributes
     has attempts: int = 1;
-    has input_weight: float = 0.0;
-    has input_height: float = 0.0;
 
-    # walker abilities.
-    can start;
-    can process_weight_and_height;
+    # walker abilities
+    can start with root entry;
+    can process_weight_and_height with turn entry;
 
-    # define start function
-    def start():
-        std.log("🏁 Welcome to the Weightloss Game!")
-        std.log("Let's begin tracking your healthy weight journey.😎")
+    # Define start and loop functions
+    def start {
+        std.out("🏁 Welcome to the Weightloss Game!");
+        std.out("Track your healthy weight with the help of AI 😎");
 
-    # Interactive inputs 
-        self.input_weight = float(input("Enter your current weight (kg): "))
-        self.input_height = float(input("Enter your height (cm): "))
+        loop {
+            std.out("\\n🔢 Enter your weight in kilograms:");
+            weight = std.input();
 
-        self.process_weight_and_height()
+            std.out("📏 Enter your height in meters:");
+            height = std.input();
 
-    # define process_weight_and_height function.
-    def process_weight_and_height():
-        std.log("📥Processing your data...")
-        spawn here ++ turn(weight=self.input_weight, height=self.input_height)
-    
-with entry:
-    walker = weightloss()
-    walker.start()
+            try {
+                w = float(weight);
+                h = float(height);
+                spawn here ++ turn(weight=w, height=h);
+            } catch {
+                std.out("⚠️ Please enter valid numeric values!");
+            };
+
+            std.out("\\nWould you like to try again? (y/n):");
+            again = std.input();
+
+            if again == "n" or again == "N" {
+                std.out("👋 Thanks for playing! Stay healthy and strong!");
+                break;
+            };
+
+            self.attempts += 1;
+        };
+    };
+};
+
+# Entry point
+with entry {
+    walker::weightloss.start();
+};
